@@ -1,0 +1,221 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="RouteResQ helps travelers compare alternative journeys when plans change.">
+  <title>RouteResQ | Journey Recovery</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a class="brand" href="#">
+      <span class="brand-icon">R</span>
+      RouteResQ<span class="brand-dot">.</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="#planner">Journey Planner</a>
+      <a href="#alternatives">Alternatives</a>
+    </div>
+
+    <a class="nav-cta" href="#planner">Plan my journey ↗</a>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow"><span class="live-dot"></span> YOUR JOURNEY, BACK ON TRACK</span>
+        <h1>Plans change.<br>We've got your <span>way forward.</span></h1>
+        <p>When your journey takes an unexpected turn, find smarter alternatives without the stress.</p>
+        <a class="hero-link" href="#planner">Find your alternative <span>↓</span></a>
+      </div>
+
+      <div class="hero-visual">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="route-illustration">
+          <span class="pin pin-start">A</span>
+          <span class="pin pin-end">B</span>
+          <svg viewBox="0 0 320 210" role="img" aria-label="Illustration of an alternative travel route">
+            <path d="M35 165 C80 165 75 45 150 75 S210 175 285 45"
+              fill="none" stroke="#B7DED9" stroke-width="5" stroke-linecap="round"
+              stroke-dasharray="7 9"/>
+            <path d="M35 165 C80 165 75 45 150 75 S210 175 285 45"
+              fill="none" stroke="#168B83" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="150" cy="75" r="8" fill="#F5B65F"/>
+            <circle cx="210" cy="133" r="6" fill="#168B83"/>
+            <rect x="95" y="91" width="128" height="44" rx="12" fill="#FFFFFF"/>
+            <text x="159" y="108" text-anchor="middle" font-size="10" fill="#68778B">BETTER ROUTE</text>
+            <text x="159" y="124" text-anchor="middle" font-size="14" font-weight="bold" fill="#173F5F">Found!</text>
+          </svg>
+        </div>
+        <div class="floating-card">
+          <span class="success-icon">✓</span>
+          <div><strong>A new way forward</strong><small>Compare. Choose. Continue.</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="planner panel" id="planner">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">JOURNEY RECOVERY</span>
+          <h2>Where do you need to go?</h2>
+        </div>
+        <span class="step-label">01 / PLAN</span>
+      </div>
+
+      <form id="searchForm">
+        <div class="form-grid">
+          <label class="field">
+            <span>FROM</span>
+            <input id="source" value="Bengaluru" placeholder="Starting city" required>
+          </label>
+
+          <button type="button" class="swap-btn" id="swapBtn" aria-label="Swap origin and destination">⇄</button>
+
+          <label class="field">
+            <span>TO</span>
+            <input id="destination" value="Belagavi" placeholder="Destination city" required>
+          </label>
+
+          <label class="field">
+            <span>TRAVEL DATE</span>
+            <input id="travelDate" type="date" required>
+          </label>
+
+          <label class="field">
+            <span>MAXIMUM BUDGET (₹)</span>
+            <input id="budget" type="number" min="1" value="1200" required>
+          </label>
+        </div>
+
+        <div class="planner-bottom">
+          <p>✳ Compare options based on your priorities.</p>
+          <button class="primary-btn" type="submit">Find alternatives <span>→</span></button>
+        </div>
+      </form>
+    </section>
+ 
+<section class="panel disruption-panel" id="disruption">
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow">JOURNEY DISRUPTION</span>
+            <h2>What went wrong?</h2>
+            <p class="muted">Tell us what happened so we can find a better way forward.</p>
+        </div>
+    </div>
+
+    <form id="disruptionForm">
+        <div class="form-grid">
+
+            <label class="field">
+                <span>DISRUPTION TYPE</span>
+                <select id="disruptionType" required>
+                    <option value="Delayed">Vehicle delayed</option>
+                    <option value="Cancelled">Journey cancelled</option>
+                    <option value="Missed Connection">Missed connection</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span>ORIGINAL TRANSPORT</span>
+                <select id="originalTransport" required>
+                    <option value="Bus">Bus</option>
+                    <option value="Train">Train</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span>DELAY DURATION</span>
+                <select id="delayDuration">
+                    <option value="0">Not applicable</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">1 hour</option>
+                    <option value="120">2 hours</option>
+                    <option value="240">4 hours or more</option>
+                </select>
+            </label>
+
+            <label class="field">
+                <span>MAXIMUM BUDGET (₹)</span>
+                <input id="recoveryBudget" type="number"
+                       min="1" value="1200" required>
+            </label>
+
+        </div>
+
+        <div class="planner-bottom">
+            <p>Recommendations use illustrative sample data.</p>
+            <button class="primary-btn" type="submit">
+                Recover my journey →
+            </button>
+        </div>
+    </form>
+
+    <div id="recoveryMessage" aria-live="polite"></div>
+</section>
+
+    <section class="results-section" id="alternatives">
+      <div class="section-heading results-heading">
+        <div>
+          <span class="eyebrow">YOUR NEXT BEST MOVE</span>
+          <h2>Alternative journeys</h2>
+          <p class="muted" id="resultsSummary">Explore options for your next journey.</p>
+        </div>
+        <label class="sort-control">
+          <span>Sort by</span>
+          <select id="sortBy">
+            <option value="recommended">Recommended</option>
+            <option value="price">Lowest price</option>
+            <option value="duration">Shortest duration</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="notice" id="notice">
+        <span class="notice-icon">i</span>
+        <p><strong>Travel plans disrupted?</strong><br>
+        These illustrative routes help you explore alternatives. Check actual schedules and fares before travelling.</p>
+      </div>
+
+      <div class="route-grid" id="routeGrid">
+        <div class="empty-state">Enter your journey details to compare alternatives.</div>
+      </div>
+      <p class="data-note">Demo experience · Sample data only · No live transport availability</p>
+    </section>
+
+    <section class="how-section">
+      <span class="eyebrow">HOW ROUTERESQ HELPS</span>
+      <h2>Less scrambling. More moving.</h2>
+      <div class="benefit-grid">
+        <article class="benefit-card">
+          <span class="benefit-icon">↗</span>
+          <h3>Explore alternatives</h3>
+          <p>Compare different travel options in one place.</p>
+        </article>
+        <article class="benefit-card">
+          <span class="benefit-icon">₹</span>
+          <h3>Stay on budget</h3>
+          <p>Find options that fit your spending limit.</p>
+        </article>
+        <article class="benefit-card">
+          <span class="benefit-icon">◷</span>
+          <h3>Save valuable time</h3>
+          <p>Compare journey durations and transfers.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="brand" href="#"><span class="brand-icon">R</span> RouteResQ<span class="brand-dot">.</span></a>
+    <p>Helping you find your way forward.</p>
+    <small>Prototype using illustrative travel data.</small>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
