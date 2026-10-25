@@ -1,93 +1,143 @@
 # RouteResQ — Intelligent Journey Recovery System
 
-**RouteResQ** is a web-based journey recovery application designed to help travellers find alternative transportation options when their original journey is disrupted by delays, cancellations, or missed connections.
+**When journeys go wrong, find your way forward.**
 
-The application uses a rule-based, weighted scoring algorithm to rank alternative routes according to travel time, fare, and number of transfers. It also considers the disruption type when prioritising alternatives.
+RouteResQ is a web-based journey recovery application designed to help travellers identify alternative transportation options when their original journey is disrupted by delays, cancellations, or missed connections.
 
-> **Data notice:** The current version uses illustrative sample route data. It does not provide live transport schedules, real-time disruption alerts, or verified current fares.
+The application filters available routes according to the traveller's destination and budget, then ranks eligible alternatives using a disruption-aware weighted scoring algorithm. Recommendations include scores and explanations to help users compare their options.
+
+**Project repository:** https://github.com/Laxmi14S/RouteResQ
+
+> **Data notice:** The current implementation uses illustrative sample route data. It does not provide live transport schedules, real-time disruption alerts, verified current fares, or transport bookings.
+
+## Table of Contents
+
+* [Problem Statement](#problem-statement)
+* [Key Features](#key-features)
+* [Technology Stack](#technology-stack)
+* [How It Works](#how-it-works)
+* [Route Scoring Algorithm](#route-scoring-algorithm)
+* [Project Structure](#project-structure)
+* [API Documentation](#api-documentation)
+* [Getting Started](#getting-started)
+* [Running Tests](#running-tests)
+* [Current Limitations](#current-limitations)
+* [Future Enhancements](#future-enhancements)
+* [Author](#author)
 
 ## Problem Statement
 
-Travel disruptions can leave passengers struggling to find suitable alternatives within their budget and time constraints. Comparing multiple transportation options manually can be time-consuming.
+Unexpected travel disruptions can leave passengers struggling to find alternative transportation within their budget and time constraints.
 
-RouteResQ addresses this problem by filtering and ranking available alternative routes based on a traveller's preferences and the type of disruption.
+When a bus or train is delayed or cancelled, travellers may need to compare alternative routes, fares, journey durations, and transfers manually.
+
+RouteResQ addresses this problem by providing a structured journey recovery workflow. It evaluates the available alternatives and ranks them according to the type of disruption and the traveller's budget.
 
 ## Key Features
 
-* **Journey Recovery:** Recommends alternatives for delays, cancellations, and missed connections.
-* **Budget-Based Filtering:** Excludes routes that exceed the specified budget.
-* **Weighted Route Ranking:** Evaluates alternatives using travel time, fare, and number of transfers.
-* **Disruption-Aware Recommendations:** Adjusts scoring priorities according to the disruption type.
-* **Alternative Route Comparison:** Returns ranked alternatives with scores and explanations.
-* **REST API:** Uses Django REST Framework-style JSON responses through Django API views.
-* **Responsive Interface:** Provides a web interface designed to work across desktop and mobile screen sizes.
+* **Journey Recovery:** Generates alternative route recommendations for delays, cancellations, and missed connections.
+* **Budget-Based Filtering:** Excludes routes that exceed the specified recovery budget.
+* **Disruption-Aware Ranking:** Adjusts scoring priorities according to the disruption type.
+* **Weighted Route Scoring:** Evaluates alternatives using travel duration, fare, and number of transfers.
+* **Alternative Route Comparison:** Returns ranked alternatives with scores and explanatory reasons.
+* **Transport-Type Filtering:** Excludes alternatives using the same transport type as the disrupted journey.
+* **REST-Style JSON API:** Provides endpoints for retrieving routes and requesting recovery recommendations.
+* **Responsive User Interface:** Uses HTML, CSS, and JavaScript to provide a web-based journey planning experience.
 
 ## Technology Stack
 
-### Frontend
-
-* HTML5
-* CSS3
-* JavaScript
-
-### Backend
-
-* Python
-* Django
-* Django REST Framework
-
-### Database
-
-* SQLite
-
-### Development Tools
-
-* Visual Studio Code
-* Git and GitHub
+| Component               | Technology                            |
+| ----------------------- | ------------------------------------- |
+| Frontend                | HTML5, CSS3, JavaScript               |
+| Backend                 | Python, Django                        |
+| Database                | SQLite                                |
+| API                     | Django views returning JSON responses |
+| Cross-Origin Requests   | django-cors-headers                   |
+| Testing                 | Django automated test framework       |
+| Version Control         | Git and GitHub                        |
+| Development Environment | Visual Studio Code                    |
 
 ## How It Works
 
-1. The traveller provides journey details and recovery preferences.
-2. RouteResQ retrieves routes matching the source, destination, and budget constraints.
-3. The application excludes routes that do not meet the recovery requirements, including alternatives using the same transport type as the disrupted journey.
-4. Each remaining route receives a weighted score based on travel time, fare, and transfers.
-5. The system sorts the alternatives by score and returns recommendations with explanatory reasons.
+RouteResQ follows a structured journey recovery process:
+
+1. **Collect journey details:** The traveller enters the source, destination, recovery budget, original transport type, and disruption type.
+2. **Retrieve available routes:** The backend obtains routes matching the requested journey.
+3. **Filter alternatives:** Routes that exceed the budget or fail the recovery requirements are excluded.
+4. **Calculate scores:** Each eligible route receives a weighted score based on journey duration, fare, and number of transfers.
+5. **Rank alternatives:** Routes are sorted by score, with lower scores representing better matches under the selected priorities.
+6. **Explain recommendations:** The API returns recommendation labels, scores, explanatory reasons, and a notice about the sample data.
 
 ## Route Scoring Algorithm
 
-RouteResQ uses a **custom rule-based weighted scoring algorithm**. A lower score indicates a better match under the selected scoring priorities.
+RouteResQ uses a **custom, rule-based weighted scoring algorithm** to rank eligible routes.
 
-### Normalised Metrics
+It is not a machine-learning model. It does not currently use Dijkstra's algorithm, A*, or another graph-search algorithm.
 
-The algorithm calculates three metrics:
+### 1. Normalised Metrics
 
-* **Time score:** `min(duration_minutes / 720, 1)`
-* **Fare score:** `min(price / 1500, 1)`
-* **Transfer score:** `min(transfers / 2, 1)`
+The algorithm calculates three normalised metrics:
 
-### Default Weights
+**Time score**
 
-| Metric      | Weight |
-| ----------- | -----: |
-| Travel time |   0.50 |
-| Fare        |   0.30 |
-| Transfers   |   0.20 |
+```python
+min(duration_minutes / 720, 1)
+```
 
-### Disruption-Specific Weights
+**Fare score**
 
-| Disruption type   | Time | Fare | Transfers |
-| ----------------- | ---: | ---: | --------: |
-| Delay             | 0.70 | 0.20 |      0.10 |
-| Cancellation      | 0.40 | 0.30 |      0.30 |
-| Missed connection | 0.30 | 0.20 |      0.50 |
+```python
+min(price / 1500, 1)
+```
 
-The weighted score is calculated as:
+**Transfer score**
 
-`Score = (Time score × Time weight) + (Fare score × Fare weight) + (Transfer score × Transfer weight)`
+```python
+min(transfers / 2, 1)
+```
 
-The system sorts routes in ascending score order. It also generates reasons to explain why a route may be suitable, such as fitting within the budget or being among the faster or cheaper alternatives.
+These calculations cap each metric at `1`, providing bounded inputs for the weighted scoring formula.
 
-**Algorithm note:** This is a rule-based scoring approach, not a machine-learning prediction model or a graph-search algorithm such as Dijkstra's or A*.
+### 2. Default Weights
+
+| Metric              | Weight |
+| ------------------- | -----: |
+| Travel time         |   0.50 |
+| Fare                |   0.30 |
+| Number of transfers |   0.20 |
+
+### 3. Disruption-Specific Weights
+
+The algorithm changes the relative importance of each metric depending on the disruption type.
+
+| Disruption Type   | Time Weight | Fare Weight | Transfer Weight |
+| ----------------- | ----------: | ----------: | --------------: |
+| Delay             |        0.70 |        0.20 |            0.10 |
+| Cancellation      |        0.40 |        0.30 |            0.30 |
+| Missed connection |        0.30 |        0.20 |            0.50 |
+
+For example, when a delay occurs, travel time receives the highest weight. When a connection is missed, the number of transfers receives greater weight.
+
+### 4. Weighted Score Formula
+
+The algorithm calculates the score as follows:
+
+```text
+Score =
+    (Time Score × Time Weight)
+  + (Fare Score × Fare Weight)
+  + (Transfer Score × Transfer Weight)
+```
+
+The system sorts eligible routes in ascending order of their scores.
+
+A lower score indicates a better match according to the selected weights. The result is a rule-based ranking, not a guarantee that a route is objectively optimal.
+
+### 5. Explainable Recommendations
+
+Alongside the scores, RouteResQ provides explanatory reasons to help users understand why an alternative may be suitable.
+
+These may include whether a route is within budget and whether it is among the faster or cheaper alternatives.
 
 ## Project Structure
 
@@ -98,30 +148,36 @@ RouteResQ/
 │   └── urls.py
 ├── journeys/
 │   ├── migrations/
-│   ├── tests.py
 │   ├── models.py
 │   ├── views.py
-│   └── urls.py
-├── venv/
+│   ├── urls.py
+│   └── tests.py
 ├── index.html
 ├── style.css
 ├── script.js
 ├── manage.py
-├── db.sqlite3
-└── README.md
+├── requirements.txt
+├── README.md
+└── .gitignore
 ```
 
-*Note: The structure above highlights the main project files. Your local project may contain additional files.*
+The project may contain additional Django configuration, migration, and development files.
 
-## API Endpoints
+The `venv/` directory and local SQLite database are intentionally excluded from version control by the project's `.gitignore`.
 
-| Endpoint         | Method | Purpose                                           |
-| ---------------- | ------ | ------------------------------------------------- |
-| `/api/`          | GET    | API home or status information                    |
-| `/api/routes/`   | GET    | Retrieve available routes, with supported filters |
-| `/api/recovery/` | POST   | Generate ranked journey recovery recommendations  |
+## API Documentation
+
+RouteResQ exposes endpoints for retrieving route information and requesting journey recovery recommendations.
+
+| Endpoint         | Method | Purpose                                          |
+| ---------------- | ------ | ------------------------------------------------ |
+| `/api/`          | GET    | API home or status information                   |
+| `/api/routes/`   | GET    | Retrieve available routes with supported filters |
+| `/api/recovery/` | POST   | Generate ranked journey recovery recommendations |
 
 ### Example Recovery Request
+
+A recovery request can use the following JSON structure:
 
 ```json
 {
@@ -133,108 +189,180 @@ RouteResQ/
 }
 ```
 
-The recovery endpoint returns matching alternatives, scores, recommendation labels, explanatory reasons, and a data notice.
+This example illustrates the request format. The actual response depends on the routes available in the database and the backend's filtering and scoring logic.
 
-*The example illustrates the request format; the actual response depends on the current database and API implementation.*
+### Recovery Response
+
+The recovery endpoint returns information about eligible alternatives, including fields such as:
+
+* Route details
+* Recommendation label
+* Weighted score
+* Explanatory reasons
+* Data notice
+
+The API uses the configured Django views to process requests and return JSON responses.
 
 ## Getting Started
 
+Follow these instructions to run RouteResQ locally on Windows.
+
 ### Prerequisites
+
+Install the following tools:
 
 * Python 3.11 or a compatible Python version
 * pip
 * Visual Studio Code or another code editor
+* The Live Server extension for VS Code, or an equivalent way to serve the frontend
 
 ### 1. Clone the Repository
 
-```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+Open PowerShell and run:
+
+```powershell
+git clone https://github.com/Laxmi14S/RouteResQ.git
 cd RouteResQ
 ```
 
-Replace the placeholder with your actual GitHub repository URL.
+### 2. Create a Virtual Environment
 
-### 2. Create and Activate a Virtual Environment
-
-On Windows:
-
-```bash
+```powershell
 python -m venv venv
-venv\Scripts\activate
 ```
+
+Activate it:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks activation, use an appropriate activation method for your Windows environment.
 
 ### 3. Install Dependencies
 
-If a `requirements.txt` file is available:
+Install the packages listed in `requirements.txt`:
 
-```bash
-pip install -r requirements.txt
+```powershell
+python -m pip install -r requirements.txt
 ```
 
-Otherwise, install the packages required by your project, including Django, Django REST Framework, and django-cors-headers, as applicable to your configuration.
+The current dependency file includes Django, django-cors-headers, and their supporting packages.
 
-### 4. Apply Database Migrations
+### 4. Prepare the Database
 
-```bash
+Apply the database migrations:
+
+```powershell
 python manage.py migrate
 ```
 
+**Sample-data note:** The local SQLite database is excluded from GitHub. Applying migrations creates the database schema, but it does not automatically populate the illustrative route records. The current project requires its sample route data to be added through the appropriate database setup process.
+
 ### 5. Start the Backend
 
-```bash
+From the directory containing `manage.py`, run:
+
+```powershell
 python manage.py runserver
 ```
 
-The backend will normally be available at:
+By default, the Django development server runs at:
 
-`http://127.0.0.1:8000/`
+```text
+http://127.0.0.1:8000/
+```
 
 ### 6. Start the Frontend
 
-Open the project folder in Visual Studio Code and launch `index.html` using the Live Server extension.
+Open the project directory in Visual Studio Code.
+
+Launch `index.html` using the Live Server extension.
 
 The frontend will typically be available at:
 
-`http://127.0.0.1:5500/`
+```text
+http://127.0.0.1:5500/
+```
 
-Keep the backend running while using the frontend.
+Keep the Django backend running while using the frontend.
 
-## Testing
+The frontend's configured API address and the CORS settings must match the environment in which the application is running.
 
-The project includes automated tests covering areas such as:
+## Running Tests
 
-* API endpoints
+RouteResQ includes automated tests covering areas such as:
+
+* API endpoint behaviour
 * Route retrieval
 * Route scoring
-* Journey recovery behaviour
+* Journey recovery scenarios
 
-The test suite has been run during development.
+Run the Django test suite with:
 
-To execute the tests in a fresh environment:
-
-```bash
+```powershell
 python manage.py test journeys
 ```
 
+The project test suite has been executed during development. The command above can be used to run it again after setting up the project in a new environment.
+
 ## Current Limitations
 
-* Route information is illustrative sample data rather than live transport information.
-* The application does not currently integrate with official transport booking services.
-* Recommendations are based on a configurable weighted scoring algorithm.
-* The quality of recommendations depends on the routes available in the database.
+The current implementation has the following limitations:
+
+* Route information is based on illustrative sample data rather than live transport information.
+* Live train and bus schedules are not integrated.
+* Real-time delay and cancellation alerts are not available.
+* The application does not currently book tickets or integrate with official transport booking services.
+* Recommendations depend on the route records available in the database.
+* The weighted scoring algorithm uses predefined rules rather than learned predictions.
+* Applying database migrations alone does not populate the sample routes.
+
+These limitations define the current implementation and provide opportunities for further development.
 
 ## Future Enhancements
 
-* Integrate verified transport APIs for live schedules and fares.
-* Add real-time delay and cancellation notifications.
-* Incorporate connection-risk estimation and estimated arrival times.
+Potential improvements include:
+
+### Transport Data Integration
+
+* Integrate suitable transport APIs for verified schedules and fares.
+* Introduce real-time disruption information where reliable data sources are available.
+* Improve handling of unavailable or outdated route information.
+
+### Journey Recovery
+
+* Add connection-risk estimation based on arrival and departure times.
+* Estimate the impact of delays on connecting journeys.
+* Support richer multi-leg and multi-modal journey comparisons.
+
+### User Experience
+
 * Add map-based route visualisation.
-* Improve route recommendations using historical journey data.
-* Add user accounts and saved journeys.
-* Deploy the application with a production-ready database and hosting configuration.
+* Allow users to save and revisit journey plans.
+* Improve accessibility and provide clearer explanations for route recommendations.
+
+### Engineering and Deployment
+
+* Add a repeatable sample-data seeding command.
+* Expand automated testing for edge cases and invalid requests.
+* Deploy the application with production-appropriate settings and hosting.
+* Evaluate the use of a production-ready database.
+
+### Recommendation Improvements
+
+* Evaluate the scoring algorithm against realistic travel scenarios.
+* Allow users to customise the relative importance of time, cost, and transfers.
+* Explore historical journey data if suitable data becomes available.
+
+These are proposed enhancements, not claims about features already implemented.
 
 ## Author
 
 **Laxmi Sonnad**
+
+B.E. in Artificial Intelligence and Data Science
+
+GitHub: https://github.com/Laxmi14S/RouteResQ
 
 
