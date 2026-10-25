@@ -16,6 +16,8 @@ const routeGrid = document.getElementById("routeGrid");
 const summary = document.getElementById("resultsSummary");
 
 let displayedRoutes = [];
+let recoveryRankedRoutes = [];
+let currentResultsMode = "search";
 let currentJourney = null;
 let isLoading = false;
 
@@ -80,13 +82,18 @@ function normalizeRoute(route) {
         duration: route.duration_minutes,
         fare: route.price,
         transfers: route.transfers,
-        label: route.description || route.transport
+        label: route.description || route.transport,
+        description: route.description || "",
+        recommendation: route.recommendation || "",
+        reasons: Array.isArray(route.reasons) ? route.reasons : [],
+        score: route.score
     };
 }
 
 
 // ============================================
 // 5. Calculate recommendation score
+// Used for normal route search only
 // Lower score means a better balance of time and fare
 // ============================================
 
@@ -100,13 +107,31 @@ function getRecommendationScore(route) {
 // ============================================
 
 function sortRoutes() {
+
+    // For recovery results, preserve Django's ranking
+    // when the user selects Recommended.
+    if (
+        sortSelect.value === "recommended" &&
+        currentResultsMode === "recovery"
+    ) {
+        displayedRoutes = [...recoveryRankedRoutes];
+        return;
+    }
+
     if (sortSelect.value === "price") {
+
         displayedRoutes.sort((a, b) => a.fare - b.fare);
+
     } else if (sortSelect.value === "duration") {
+
         displayedRoutes.sort((a, b) => a.duration - b.duration);
+
     } else {
+
         displayedRoutes.sort(
-            (a, b) => getRecommendationScore(a) - getRecommendationScore(b)
+            (a, b) =>
+                getRecommendationScore(a) -
+                getRecommendationScore(b)
         );
     }
 }
@@ -117,71 +142,136 @@ function sortRoutes() {
 // ============================================
 
 function renderRoutes() {
+
     routeGrid.innerHTML = "";
 
+    // Show an empty state if no routes are available.
     if (displayedRoutes.length === 0) {
+
         routeGrid.innerHTML = `
             <div class="empty-state">
                 No sample routes match your search and budget.
                 Try another journey or increase your budget.
             </div>
         `;
+
         return;
     }
 
     displayedRoutes.forEach((route, index) => {
+
         const card = document.createElement("article");
+
         card.className = "route-card";
 
-        if (index === 0 && sortSelect.value === "recommended") {
+        // Highlight the first result when using recommended sorting.
+        if (
+            index === 0 &&
+            sortSelect.value === "recommended"
+        ) {
             card.classList.add("recommended");
         }
 
-        const badge = index === 0
-            ? "TOP MATCH"
-            : route.label.toUpperCase();
+        // Set the card badge.
+        const badge =
+            index === 0 && sortSelect.value === "recommended"
+                ? "TOP MATCH"
+                : currentResultsMode === "recovery"
+                    ? "ALTERNATIVE"
+                    : "ROUTE OPTION";
 
+        // Display the number of transfers.
         const transferText = route.transfers === 0
             ? "Direct journey"
             : `${route.transfers} transfer(s)`;
 
+        // Recommendation message returned by Django.
         const recommendationText = route.recommendation || "";
 
+        // Display reasons returned by Django.
+        const reasonsHtml = route.reasons.length
+            ? `
+                <div class="route-reasons">
+                    <strong>Why this route?</strong>
+
+                    <ul>
+                        ${route.reasons.map(reason => `
+                            <li>${reason}</li>
+                        `).join("")}
+                    </ul>
+                </div>
+            `
+            : "";
+
+        // Display the sample route description during normal search.
+        const descriptionHtml =
+            route.description && currentResultsMode !== "recovery"
+                ? `
+                    <p class="route-description">
+                        ${route.description}
+                    </p>
+                `
+                : "";
+
+        // Build the route card.
         card.innerHTML = `
             <span class="route-label">${badge}</span>
 
             <h3>${route.transport}</h3>
 
             <p class="route-type">
-                ${currentJourney.source} → ${currentJourney.destination}
+                ${currentJourney.source}
+                →
+                ${currentJourney.destination}
             </p>
 
             <div class="route-metrics">
+
                 <div>
-                    <span class="metric-label">ESTIMATED TIME</span>
+                    <span class="metric-label">
+                        ESTIMATED TIME
+                    </span>
+
                     <span class="metric-value">
                         ${formatDuration(route.duration)}
                     </span>
                 </div>
 
                 <div>
-                    <span class="metric-label">SAMPLE FARE</span>
+                    <span class="metric-label">
+                        SAMPLE FARE
+                    </span>
+
                     <span class="metric-value">
                         ₹${route.fare.toLocaleString("en-IN")}
                     </span>
                 </div>
+
             </div>
 
-            <p class="route-transfers">${transferText}</p>
+            <p class="route-transfers">
+                ${transferText}
+            </p>
 
-            ${recommendationText
-    ? `<p class="route-recommendation">${recommendationText}</p>`
-    : ""}
+            ${descriptionHtml}
+
+            ${reasonsHtml}
+
+            ${
+                recommendationText
+                    ? `
+                        <p class="route-recommendation">
+                            ${recommendationText}
+                        </p>
+                    `
+                    : ""
+            }
 
             <button
                 class="route-action"
                 type="button"
-                data-route-id="${route.id}">
+                data-route-id="${route.id}"
+            >
                 View journey details →
             </button>
         `;
@@ -201,6 +291,7 @@ async function fetchRoutes({
     budget,
     transport = ""
 }) {
+
     const params = new URLSearchParams({
         source: source,
         destination: destination,
@@ -216,13 +307,17 @@ async function fetchRoutes({
     );
 
     if (!response.ok) {
-        throw new Error(`Route API returned HTTP ${response.status}`);
+        throw new Error(
+            `Route API returned HTTP ${response.status}`
+        );
     }
 
     const data = await response.json();
 
     if (!Array.isArray(data.routes)) {
-        throw new Error("The route API returned an unexpected response.");
+        throw new Error(
+            "The route API returned an unexpected response."
+        );
     }
 
     return data.routes.map(normalizeRoute);
@@ -234,6 +329,7 @@ async function fetchRoutes({
 // ============================================
 
 function validateJourney(source, destination, budget) {
+
     if (
         !source ||
         !destination ||
@@ -242,11 +338,15 @@ function validateJourney(source, destination, budget) {
         alert(
             "Please enter two different starting and destination cities."
         );
+
         return false;
     }
 
     if (!Number.isFinite(budget) || budget <= 0) {
-        alert("Please enter a valid budget greater than zero.");
+        alert(
+            "Please enter a valid budget greater than zero."
+        );
+
         return false;
     }
 
@@ -259,6 +359,7 @@ function validateJourney(source, destination, budget) {
 // ============================================
 
 form.addEventListener("submit", async (event) => {
+
     event.preventDefault();
 
     if (isLoading) {
@@ -280,9 +381,11 @@ form.addEventListener("submit", async (event) => {
     };
 
     sortSelect.value = "recommended";
+
     isLoading = true;
 
-    summary.textContent = "Searching the RouteResQ database...";
+    summary.textContent =
+        "Searching the RouteResQ database...";
 
     routeGrid.innerHTML = `
         <div class="empty-state">
@@ -291,6 +394,11 @@ form.addEventListener("submit", async (event) => {
     `;
 
     try {
+
+        currentResultsMode = "search";
+
+        recoveryRankedRoutes = [];
+
         displayedRoutes = await fetchRoutes({
             source,
             destination,
@@ -310,9 +418,15 @@ form.addEventListener("submit", async (event) => {
         });
 
     } catch (error) {
+
         console.error("Route search failed:", error);
 
         displayedRoutes = [];
+
+        recoveryRankedRoutes = [];
+
+        currentResultsMode = "search";
+
         renderRoutes();
 
         summary.textContent =
@@ -327,6 +441,7 @@ form.addEventListener("submit", async (event) => {
         `;
 
     } finally {
+
         isLoading = false;
     }
 });
@@ -337,11 +452,13 @@ form.addEventListener("submit", async (event) => {
 // ============================================
 
 sortSelect.addEventListener("change", () => {
+
     if (!currentJourney) {
         return;
     }
 
     sortRoutes();
+
     renderRoutes();
 });
 
@@ -351,6 +468,7 @@ sortSelect.addEventListener("change", () => {
 // ============================================
 
 routeGrid.addEventListener("click", (event) => {
+
     const button = event.target.closest("[data-route-id]");
 
     if (!button || !currentJourney) {
@@ -385,6 +503,7 @@ routeGrid.addEventListener("click", (event) => {
 const disruptionForm = document.getElementById("disruptionForm");
 
 disruptionForm.addEventListener("submit", async (event) => {
+
     event.preventDefault();
 
     const disruptionInput =
@@ -401,17 +520,23 @@ disruptionForm.addEventListener("submit", async (event) => {
         document.getElementById("recoveryBudget").value
     );
 
-    const message = document.getElementById("recoveryMessage");
+    const message =
+        document.getElementById("recoveryMessage");
+
 
     // Validate the recovery budget.
     if (!Number.isFinite(budget) || budget <= 0) {
+
         message.textContent =
             "Please enter a valid recovery budget.";
+
         return;
     }
 
+
     // Get the journey details from the planner.
     const source = sourceInput.value.trim();
+
     const destination = destinationInput.value.trim();
 
     if (
@@ -419,10 +544,13 @@ disruptionForm.addEventListener("submit", async (event) => {
         !destination ||
         source.toLowerCase() === destination.toLowerCase()
     ) {
+
         message.textContent =
             "Please enter two different cities in the journey planner first.";
+
         return;
     }
+
 
     // Normalize the selected disruption type.
     const normalizedDisruption = disruptionInput
@@ -439,13 +567,17 @@ disruptionForm.addEventListener("submit", async (event) => {
         "missed connection": "Missed connection"
     };
 
-    const disruptionType = disruptionMap[normalizedDisruption];
+    const disruptionType =
+        disruptionMap[normalizedDisruption];
 
     if (!disruptionType) {
+
         message.textContent =
             "Please select a valid disruption type.";
+
         return;
     }
+
 
     // Normalize the affected transport.
     const normalizedTransport = transportInput
@@ -455,14 +587,21 @@ disruptionForm.addEventListener("submit", async (event) => {
     let originalTransport;
 
     if (normalizedTransport.includes("bus")) {
+
         originalTransport = "Bus";
+
     } else if (normalizedTransport.includes("train")) {
+
         originalTransport = "Train";
+
     } else {
+
         message.textContent =
             "Please select Bus or Train as the affected transport.";
+
         return;
     }
+
 
     // Save the journey being recovered.
     currentJourney = {
@@ -476,7 +615,9 @@ disruptionForm.addEventListener("submit", async (event) => {
     message.textContent =
         "Analysing the disruption and finding alternatives...";
 
+
     try {
+
         // Send the recovery request to Django.
         const response = await fetch(
             `${API_BASE_URL}/recovery/`,
@@ -501,51 +642,68 @@ disruptionForm.addEventListener("submit", async (event) => {
         const data = await response.json();
 
         if (!response.ok) {
+
             throw new Error(
                 data.error || "The recovery request failed."
             );
         }
 
-        // Convert Django's response into frontend route objects.
-                displayedRoutes = data.routes.map(route => ({
-            ...normalizeRoute(route),
-            recommendation: route.recommendation
-        }));
 
-        // Django has already ranked the recovery routes.
-        // Preserve that order in the frontend.
+        // Django has already ranked recovery routes using
+        // the selected disruption type.
+        // Preserve that order instead of applying the
+        // frontend's general-purpose search score.
+        currentResultsMode = "recovery";
 
-        sortRoutes();
+        displayedRoutes = data.routes.map(normalizeRoute);
 
+        recoveryRankedRoutes = [...displayedRoutes];
+
+
+        // Update the results summary.
         summary.textContent =
             `${data.count} recovery option(s) for ` +
             `${source} to ${destination}, within ₹${budget}.`;
 
+
+        // Display recovery results.
         renderRoutes();
+
 
         // Explain the outcome to the traveller.
         if (displayedRoutes.length > 0) {
+
             message.textContent =
                 `Recovery analysis complete. ` +
                 `${data.count} alternative(s) found. ` +
-                `${data.data_notice}`;
+                `${data.data_notice || "Routes use illustrative sample data."}`;
+
         } else {
+
             message.textContent =
                 "No alternative routes match your budget and " +
                 "transport preference. Try increasing your budget.";
         }
+
 
         document.getElementById("alternatives").scrollIntoView({
             behavior: "smooth"
         });
 
     } catch (error) {
+
         console.error("Recovery request failed:", error);
 
         displayedRoutes = [];
+
+        recoveryRankedRoutes = [];
+
+        currentResultsMode = "recovery";
+
         renderRoutes();
 
-        summary.textContent = "Recovery search failed.";
+        summary.textContent =
+            "Recovery search failed.";
 
         message.textContent =
             `Unable to retrieve recovery options: ${error.message}`;
@@ -557,4 +715,6 @@ disruptionForm.addEventListener("submit", async (event) => {
 // 14. Initial status
 // ============================================
 
-console.log("RouteResQ frontend JavaScript loaded successfully.");
+console.log(
+    "RouteResQ frontend JavaScript loaded successfully."
+);
